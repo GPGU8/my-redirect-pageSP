@@ -1,0 +1,257 @@
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>海景拼图验证</title>
+<style>
+*{box-sizing:border-box;}
+body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#eef4f8;
+    font-family:Arial,sans-serif;
+    padding:18px;
+}
+.card{
+    width:390px;
+    max-width:100%;
+    background:#fff;
+    border-radius:16px;
+    padding:22px;
+    box-shadow:0 8px 35px rgba(0,0,0,.15);
+}
+h2{
+    margin:0;
+    text-align:center;
+    color:#17354b;
+}
+.desc{
+    text-align:center;
+    color:#6c7b89;
+    margin:10px 0 18px;
+    font-size:14px;
+}
+.scene{
+    width:100%;
+    aspect-ratio:340/210;
+    position:relative;
+    overflow:hidden;
+    border-radius:9px;
+    background-image:url("https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=900&q=85");
+    background-size:cover;
+    background-position:center;
+}
+.hole,.piece{
+    position:absolute;
+    width:56px;
+    height:56px;
+    border-radius:7px;
+}
+.hole{
+    background:rgba(10,33,48,.72);
+    border:3px dashed #fff;
+    box-shadow:0 0 0 2px rgba(0,0,0,.15);
+    pointer-events:none;
+}
+.piece{
+    background-image:url("https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=900&q=85");
+    background-repeat:no-repeat;
+    border:2px solid #fff;
+    box-shadow:0 3px 12px rgba(0,0,0,.4);
+    cursor:grab;
+    touch-action:none;
+    user-select:none;
+}
+.piece:active{
+    cursor:grabbing;
+}
+.piece::before{
+    content:"";
+    position:absolute;
+    width:22px;
+    height:12px;
+    left:15px;
+    top:-2px;
+    border-radius:12px 12px 0 0;
+    background:inherit;
+    border:2px solid #fff;
+    border-bottom:0;
+}
+.controls{
+    margin-top:18px;
+}
+.tip{
+    text-align:center;
+    color:#627587;
+    font-size:13px;
+    margin-bottom:10px;
+}
+input[type=range]{
+    width:100%;
+    height:28px;
+    accent-color:#1687dc;
+    cursor:grab;
+}
+.status{
+    text-align:center;
+    margin-top:12px;
+    min-height:22px;
+    font-weight:bold;
+    color:#556575;
+}
+.status.ok{
+    color:#159447;
+}
+.status.error{
+    color:#d64b4b;
+}
+button{
+    width:100%;
+    margin-top:12px;
+    padding:13px;
+    border:none;
+    border-radius:9px;
+    background:#1687dc;
+    color:#fff;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+button:disabled{
+    background:#999;
+}
+.footer{
+    text-align:center;
+    margin-top:15px;
+    font-size:11px;
+    color:#9aa7b2;
+}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>🧩 拼图验证</h2>
+<div class="desc">请拖动拼图，放到正确的位置</div>
+<div class="scene" id="scene">
+<div class="hole" id="hole"></div>
+<div class="piece" id="piece"></div>
+</div>
+<div class="controls">
+<div class="tip">← 拖动下方滑块完成拼图 →</div>
+<input id="slider" type="range">
+<div class="status" id="status">等待验证</div>
+<button id="retry">重新验证</button>
+</div>
+<div class="footer">安全验证 · 请完成拼图后继续</div>
+</div>
+<script>
+(()=>{
+//======
+// 这里只需要修改目的链接
+//======
+const TARGET_URL="https://spinbattle.co/r/YvP9XtwcgRQr";
+const scene=document.getElementById("scene");
+const hole=document.getElementById("hole");
+const piece=document.getElementById("piece");
+const slider=document.getElementById("slider");
+const status=document.getElementById("status");
+const retry=document.getElementById("retry");
+const SIZE=56;
+const TOL=8;
+let targetX,targetY,currentX=0;
+let dragging=false;
+let startPointerX,startPieceX,pointerId;
+let verified=false;
+function text(msg,type=""){
+status.textContent=msg;
+status.className="status "+type;
+}
+function render(){
+const w=scene.clientWidth;
+const h=scene.clientHeight;
+const maxX=w-SIZE;
+const maxY=h-SIZE;
+targetX=Math.round(maxX*(0.35+Math.random()0.4));
+targetY=Math.round(maxY(0.18+Math.random()*0.55));
+hole.style.left=targetX+"px";
+hole.style.top=targetY+"px";
+piece.style.left="0px";
+piece.style.top=targetY+"px";
+piece.style.backgroundSize=w+"px "+h+"px";
+piece.style.backgroundPosition=(-targetX)+"px "+(-targetY)+"px";
+slider.min=0;
+slider.max=maxX;
+slider.value=0;
+currentX=0;
+text("等待验证");
+}
+function move(x){
+const max=scene.clientWidth-SIZE;
+currentX=Math.max(0,Math.min(max,x));
+piece.style.left=currentX+"px";
+slider.value=Math.round(currentX);
+}
+function check(){
+if(verified)return;
+if(Math.abs(currentX-targetX)<=TOL){
+verified=true;
+move(targetX);
+hole.style.border="3px solid #16a34a";
+piece.style.border="2px solid #16a34a";
+slider.disabled=true;
+retry.disabled=true;
+text("✓ 验证成功，正在跳转…","ok");
+setTimeout(()=>{
+window.location.href=TARGET_URL;
+},900);
+}else{
+text("位置不正确，请再试一次","error");
+}
+}
+slider.oninput=()=>{
+if(verified)return;
+move(+slider.value);
+text("请将拼图移动到缺口");
+};
+slider.onchange=check;
+piece.addEventListener("pointerdown",e=>{
+if(verified)return;
+dragging=true;
+pointerId=e.pointerId;
+startPointerX=e.clientX;
+startPieceX=currentX;
+piece.setPointerCapture(pointerId);
+});
+piece.addEventListener("pointermove",e=>{
+if(!dragging||e.pointerId!==pointerId)return;
+const scale=scene.getBoundingClientRect().width/scene.clientWidth;
+move(startPieceX+(e.clientX-startPointerX)/scale);
+});
+function stop(e){
+if(!dragging||e.pointerId!==pointerId)return;
+dragging=false;
+check();
+}
+piece.addEventListener("pointerup",stop);
+piece.addEventListener("pointercancel",stop);
+retry.onclick=()=>{
+verified=false;
+slider.disabled=false;
+retry.disabled=false;
+hole.style.border="3px dashed #fff";
+piece.style.border="2px solid #fff";
+render();
+};
+const img=new Image();
+img.onload=render;
+img.src="https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=900&q=85";
+window.onresize=()=>{
+if(!verified)render();
+};
+})();
+</script>
+</body>
+</html>
